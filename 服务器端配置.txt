@@ -1,0 +1,7 @@
+1.服务器上安装vsftpd
+2./etc/vsftpd.conf中添加
+# Allow anonymous FTP? (Disabled by default)
+anonymous_enable=YES
+anon_root=/home/bai/share
+local_root=/home/bai/share
+3.sudo service vsftpd restart
