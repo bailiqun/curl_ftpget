@@ -7,68 +7,7 @@
 
 class FTPHelper
 {
-
-private:
-	CURL *curl;
-	CURLcode res;
-	int download_percentage;
-	int upload_percentage;
-
-	struct FtpFile {
-		const char *filename;
-		FILE *stream;
-	};
-
-	/* use to write data into file */
-	static size_t my_fwrite(void *buffer, size_t size, size_t nmemb, void *stream)
-	{
-		struct FtpFile *out = (struct FtpFile *)stream;
-		if (out && !out->stream) {
-			/* open file for writing */
-			fopen_s(&(out->stream), out->filename, "wb");
-			if (!out->stream)
-				return -1; /* failure, can't open file to write */
-		}
-		return fwrite(buffer, size, nmemb, out->stream);
-	}
-
-	/* use to get download percentage */
-	static int progress_func(void* ptr, double TotalToDownload, double NowDownloaded, double TotalToUpload, double NowUpload)
-	{
-		FTPHelper *instance = (FTPHelper*) ptr;
-		double download_percentage, upload_percentage;
-		(TotalToDownload != 0) ? (download_percentage = NowDownloaded * 100 / TotalToDownload) : (download_percentage = 0);
-		(TotalToUpload != 0) ? (upload_percentage = NowDownloaded * 100 / TotalToUpload) : (upload_percentage = 0);
-		instance->percentage_set(upload_percentage, download_percentage);
-		return 0;
-	}
-
-	int is_download_success(const char* error)
-	{
-		if (download_percentage == 100)
-		{
-			printf("\r\n[OK] Success\r\n");
-			fflush(stdout);
-			return 1;
-		}
-		else
-		{
-			printf("[ERROR] %s\r\n", error);
-			fflush(stdout);
-			return -1;
-		}
-	}
-
-	void percentage_set(int up, int down)
-	{
-		download_percentage = down;
-		upload_percentage = up;
-		std::printf("\b\b\b\b\b\b\b\b\b\b\b\b%d  %d", up, down);
-		fflush(stdout);
-	}
 public:
-
-
 	FTPHelper()
 	{
 		download_percentage = 0;
@@ -150,6 +89,70 @@ public:
 	int upload()
 	{
 	
+	}
+
+	virtual int progress_callback(int upload, int download)
+	{
+		return  1;
+	}
+private:
+	CURL* curl;
+	CURLcode res;
+	int download_percentage;
+	int upload_percentage;
+
+	struct FtpFile {
+		const char *filename;
+		FILE *stream;
+	};
+
+	/* use to write data into file */
+	static size_t my_fwrite(void *buffer, size_t size, size_t nmemb, void *stream)
+	{
+		struct FtpFile *out = (struct FtpFile *)stream;
+		if (out && !out->stream) {
+			/* open file for writing */
+			fopen_s(&(out->stream), out->filename, "wb");
+			if (!out->stream)
+				return -1; /* failure, can't open file to write */
+		}
+		return fwrite(buffer, size, nmemb, out->stream);
+	}
+
+	/* use to get download percentage */
+	static int progress_func(void* ptr, double TotalToDownload, double NowDownloaded, double TotalToUpload, double NowUpload)
+	{
+		FTPHelper *instance = (FTPHelper*)ptr;
+		double download_percentage, upload_percentage;
+		(TotalToDownload != 0) ? (download_percentage = NowDownloaded * 100 / TotalToDownload) : (download_percentage = 0);
+		(TotalToUpload != 0) ? (upload_percentage = NowDownloaded * 100 / TotalToUpload) : (upload_percentage = 0);
+		instance->percentage_set(upload_percentage, download_percentage);
+		instance->progress_callback(upload_percentage, download_percentage);
+		return 0;
+	}
+
+	int is_download_success(const char* error)
+	{
+		if (download_percentage == 100)
+		{
+			printf("\r\n[OK] Success\r\n");
+			fflush(stdout);
+			return 1;
+		}
+		else
+		{
+			printf("[ERROR] %s\r\n", error);
+			fflush(stdout);
+			return -1;
+		}
+	}
+
+	void percentage_set(int up, int down)
+	{
+		download_percentage = down;
+		upload_percentage = up;
+		std::printf("\b\b\b\b\b\b\b\b\b\b\b\b%d  %d", up, down);
+		fflush(stdout);
 	}
 };
 
