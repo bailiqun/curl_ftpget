@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "curl\curl.h"
 #include <stdio.h>
-#include <functional>
-
-
+#include <string>
 
 class FTPHelper
 {
@@ -17,43 +15,98 @@ public:
 	class ftp_file_info 
 	{
 	public:
+		const char* error;
 		ftp_file_info()
 		{
-			ip = NULL;
-			port = 22;
-			username = "Anonymous";
-			password = "";
-			file_name = NULL;
+			_ip = NULL;
+			_port = 22;
+			_username = "Anonymous";
+			_password = "";
+			_file_name = NULL;
 		}
+
+		int ip_address_set(char* ip)
+		{
+			if (ip_valid(ip))
+			{
+				_ip = ip;
+				return true;
+			}
+			printf("[ERROR] IP address is invalid.\r\n");
+			fflush(stdout);
+			return false;
+		}
+
+		int port_set(int port)
+		{
+			if (port <= 0)
+				return false;
+
+			_port = port;
+			return true;
+		}
+
+		int user_pass_set(char* user, char* pass)
+		{
+			if (user == NULL || pass == NULL)
+				return false;
+
+			_username = user;
+			_password = pass;
+			return true;
+		}
+
+		int file_name_set(char* file_name)
+		{
+			if (file_name == NULL)
+				return false;
+
+			_file_name = file_name;
+			return true;
+		}
+
+		inline int   port_get()  const { return _port; }
+		inline char* ip_get()    const { return _ip; }
+		inline char* user_get()  const { return _username; }
+		inline char* pass_get()  const { return _password; }
+		inline char* file_name_get() const { return _file_name; }
+	private:
+		char* _ip;
+		int   _port;
+		char* _username;
+		char* _password;
+		char* _file_name;
+
 		int ip_valid(const char* ip)
 		{
-			return 1;
+			int sub[4] = { 0,0,0,0 };
+			if (sscanf_s(ip, "%d.%d.%d.%d", sub, sub + 1, sub + 2, sub + 3) != 4)
+			{
+				return false;
+			}
+			for (int i = 0; i < 4; ++i)
+			{
+				if (sub[i] < 0 || sub[i] > 255)
+				{
+					return false;
+				}
+			}
+			return true;
 		}
-
-		char* ip;
-		int   port;
-		char* username;
-		char* password;
-		char* file_name;
-		const char* error;
 	};
 
-	int download(ftp_file_info* profile)
+	int download(ftp_file_info* profile,std::string location = "./")
 	{
-		using namespace std::placeholders;
 		struct FtpFile ftpfile;
 
-		if (profile->file_name == NULL)
-			return -1;
-
-		ftpfile.filename = profile->file_name;
+		ftpfile.filename = profile->file_name_get();
 		ftpfile.stream = NULL;
 
 		char taget_file[100] = { '\0' };
-		sprintf_s(taget_file, 99, "ftp://%s/%s", profile->ip, profile->file_name);
+		sprintf_s(taget_file, 99, "ftp://%s/%s", profile->ip_get(), profile->file_name_get());
 
 		char user_info[100] = { '\0' };
-		sprintf_s(user_info, 99, "%s:%s", profile->username, profile->password);
+		sprintf_s(user_info, 99, "%s:%s", profile->user_get(), profile->pass_get());
 
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 		curl = curl_easy_init();
@@ -73,7 +126,7 @@ public:
 			curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
 			res = curl_easy_perform(curl);
 
-			profile->error = curl_easy_strerror(res);
+			(const char*)profile->error = curl_easy_strerror(res);
 
 			curl_easy_cleanup(curl);
 		}
@@ -151,7 +204,7 @@ private:
 	{
 		download_percentage = down;
 		upload_percentage = up;
-		std::printf("\b\b\b\b\b\b\b\b\b\b\b\b%d  %d", up, down);
+		printf("\b\b\b\b\b\b\b\b\b\b\b\b%d  %d", up, down);
 		fflush(stdout);
 	}
 };
@@ -163,11 +216,9 @@ int main(void)
 {
 	FTPHelper ftp;
 	FTPHelper::ftp_file_info info;
-	info.ip = "192.168.3.8";
-	info.file_name = "map.pgm";
-	info.username = "bai";
-	info.password = "a";
-
+	info.ip_address_set("192.168.3.8");
+	info.user_pass_set("bai", "a");
+	info.file_name_set("map.pgm");
 	ftp.download(&info);
 	getchar();
 	return 0;
